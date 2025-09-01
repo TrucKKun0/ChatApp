@@ -1,0 +1,70 @@
+<%- include('layout/header') %>
+<h2 class="mb-4">Welcome to the Dashboard, <%= user.name %>!</h2>
+<div class="row">
+    <div class="col-md-6">
+        <h3>Other Users</h3>
+        <ul class="list-group">
+            <% if (users && users.length > 0) { %>
+                <% for (let i = 0; i < users.length; i++) { %>
+                    <li class="list-group-item cursor-pointer user-list d-flex align-items-center">
+                        <img src="<%= users[i].image %>"  
+                             class="img-fluid rounded-circle me-2"
+                             style="width: 50px; height: 50px;">
+                        <span><%= users[i].name %></span>
+                        <% if(users[i].is_online === '1'){ %>
+                            <span class="badge bg-success ms-auto" id="<%= users[i]._id %>-status">Online</span>
+                        <% } else { %>
+                            <span class="badge bg-secondary ms-auto" id="<%= users[i]._id %>-status">Offline</span>
+                        <% } %>
+                    </li>  
+                <% } %>
+            <% } else { %>
+                <li class="list-group-item">No other users found.</li>
+            <% } %>
+        </ul>
+    </div>
+    <div class="col-md-6">
+        <h3 class="start-head">Click to start chat</h3>
+        <div class="chat-section">
+            <div class="chat-container border p-2 mb-2" style="height:300px; overflow-y:auto;">
+                <!-- messages will load here -->
+            </div>
+            <form id="chat-form">
+                <input type="text" class="form-control mb-2" id="message" placeholder="Type your message..." required>
+                <input type="submit" class="btn btn-primary w-100" value="Send">
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    var sender_id = '<%= user._id %>';
+    var socket = io('/user-namespace', {
+        auth: { token: '<%= user._id %>' }
+    });
+
+    $(document).ready(function(){
+        $(".user-list").click(function(){
+            $(".start-head").hide();
+            $(".chat-section").show();
+        });
+
+        $("#chat-form").submit(function(e){
+            e.preventDefault();
+            let msg = $("#message").val();
+            if(msg.trim() !== ""){
+                socket.emit("send_message", { sender_id, msg });
+                $("#message").val("");
+            }
+        });
+    });
+    socket.on('getOnlineUser',(data)=>{
+        let userId = data.user_id;
+        $("#" + userId + "-status").removeClass("bg-secondary").addClass("bg-success").text("Online");
+    });
+    socket.on('getOfflineUser',(data)=>{
+        let userId = data.user_id;
+        $("#" + userId + "-status").removeClass("bg-success").addClass("bg-secondary").text("Offline");
+    });
+</script>
+<%- include('layout/footer') %>
