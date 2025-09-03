@@ -5,6 +5,7 @@ mongoose.connect("mongodb://localhost:27017/chatapp")
 const app = express();
 const http = require("http").Server(app);
 const userRouter = require("./routes/userRoute");
+const chatModel = require("./models/chatModel");
 const user = require("./models/userModel");
 app.use('/', userRouter);
 
@@ -24,6 +25,23 @@ usp.on("connection",async (socket) => {
     socket.on("newMessage", (data) => {
         socket.broadcast.emit("loadNewChat", data);
     });
+    socket.on("existsChat", async  (data) => {
+        console.log("Received existsChat request:", data);
+       const chats = await chatModel.find({
+            $or:[
+                {
+                    sender_id : data.sender_id,
+                    receiver_id : data.receiver_id
+                },
+                {
+                    sender_id : data.receiver_id,
+                    receiver_id : data.sender_id
+                }
+            ]
+        }).sort({ createdAt: 1 });
+        console.log("Found chats:", chats.length);
+        socket.emit("loadChatHistory", chats);
+    })
 });
 http.listen(3000, () => {
     console.log("Server is running on port 3000");

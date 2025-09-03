@@ -53,15 +53,18 @@
             $(".start-head").hide();
             $(".chat-section").show();
             receiver_id = $(this).data("id");
+            console.log("Requesting chat history for:", { sender_id, receiver_id });
+            socket.emit("existsChat", { sender_id, receiver_id });
         });
 
-        // Chat form submission using Fetch
+        // Chat form submission
         $("#chat-form").submit(async function(e){
             e.preventDefault();
             const message = $("#message").val().trim();
             if(!message || !receiver_id) return;
 
             try {
+                // Save to DB
                 const response = await fetch('/saveChat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -72,16 +75,31 @@
                 if(data.success){
                     $("#message").val('');
                     $(".chat-container").append(`
-                        <div class="current-user-chat">
+                        <div class="current-user-chat text-end">
                             <h4>${data.data.message}</h4>
                         </div>
                     `);
                     $(".chat-container").scrollTop($(".chat-container")[0].scrollHeight);
+
+                    
+                    socket.emit("newMessage", data.data);
                 } else {
                     alert(data.msg);
                 }
             } catch(err){
                 console.error("Fetch error:", err);
+            }
+        });
+
+        
+        socket.on("loadNewChat", (chat) => {
+            if(chat.sender_id === receiver_id && chat.receiver_id === sender_id){
+                $(".chat-container").append(`
+                    <div class="other-user-chat text-start">
+                        <h4>${chat.message}</h4>
+                    </div>
+                `);
+                $(".chat-container").scrollTop($(".chat-container")[0].scrollHeight);
             }
         });
 
@@ -99,6 +117,23 @@
                 .addClass("bg-secondary")
                 .text("Offline");
         });
+    });
+    socket.on("loadChatHistory", (chats) => {
+        console.log("Received chat history:", chats);
+        $(".chat-container").html('');
+        let html = '';
+        for(let i = 0; i < chats.length; i++){
+            let addClass = '';
+            if(chats[i].sender_id === sender_id){
+                addClass = 'current-user-chat text-end';
+            } else {
+                addClass = 'other-user-chat text-start';
+            }
+            html += `<div class="${addClass}"><h4>${chats[i].message}</h4></div>`;
+        }
+        console.log("Generated HTML:", html);
+        $(".chat-container").append(html);
+        $(".chat-container").scrollTop($(".chat-container")[0].scrollHeight);
     });
 </script>
 
