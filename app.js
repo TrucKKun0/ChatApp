@@ -21,6 +21,9 @@ usp.on("connection",async (socket) => {
         await user.findOneAndUpdate({_id: userId}, {is_online: '0'});
         socket.broadcast.emit("getOfflineUser", { user_id:userId});
     });
+    socket.on("newMessage", (data) => {
+        socket.broadcast.emit("loadNewChat", data);
+    });
 });
 http.listen(3000, () => {
     console.log("Server is running on port 3000");

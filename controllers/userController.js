@@ -1,6 +1,7 @@
 const userModel = require("../models/userModel");
 const User = require("../models/userModel");
 const bcrypt = require("bcrypt");
+const chatModel = require("../models/chatModel");
 
 
 const registerLoad = async(req,res)=>{
@@ -99,11 +100,30 @@ const login = async(req,res)=>{
     }
 };
 
+const saveChat = async (req, res) => {
+try{
+    const {sender_id,receiver_id,message} = req.body;
+    if(!sender_id || !receiver_id || !message){
+        return res.status(400).send({success:false,msg:"All fields are required"});
+    }
+    const chat = new chatModel({
+        sender_id,
+        receiver_id,
+        message
+    });
+    const newChat= await chat.save();
+    res.status(200).send({success:true,msg:"Chat saved successfully",data:newChat});
+}catch(error){
+    res.status(500).send({success:false,msg:error.message});
+
+    }
+}
 module.exports = {
     registerLoad,
     register,
     loadLogin,
     loadDashboard,
     logout,
-    login
+    login,
+    saveChat
 };

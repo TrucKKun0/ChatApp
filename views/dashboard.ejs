@@ -6,7 +6,7 @@
         <ul class="list-group">
             <% if (users && users.length > 0) { %>
                 <% for (let i = 0; i < users.length; i++) { %>
-                    <li class="list-group-item cursor-pointer user-list d-flex align-items-center">
+                    <li class="list-group-item cursor-pointer user-list d-flex align-items-center" data-id="<%= users[i]._id %>">
                         <img src="<%= users[i].image %>"  
                              class="img-fluid rounded-circle me-2"
                              style="width: 50px; height: 50px;">
@@ -23,12 +23,14 @@
             <% } %>
         </ul>
     </div>
+
     <div class="col-md-6">
         <h3 class="start-head">Click to start chat</h3>
-        <div class="chat-section">
+        <div class="chat-section" style="display:none;">
             <div class="chat-container border p-2 mb-2" style="height:300px; overflow-y:auto;">
-                <!-- messages will load here -->
+                <!-- messages will appear here -->
             </div>
+
             <form id="chat-form">
                 <input type="text" class="form-control mb-2" id="message" placeholder="Type your message..." required>
                 <input type="submit" class="btn btn-primary w-100" value="Send">
@@ -38,33 +40,66 @@
 </div>
 
 <script>
-    var sender_id = '<%= user._id %>';
-    var socket = io('/user-namespace', {
-        auth: { token: '<%= user._id %>' }
-    });
+    const sender_id = '<%= user._id %>';
+    let receiver_id;
+
+    // Socket.IO connection
+    const socket = io('/user-namespace', { auth: { token: sender_id } });
 
     $(document).ready(function(){
+
+        // User list click
         $(".user-list").click(function(){
             $(".start-head").hide();
             $(".chat-section").show();
+            receiver_id = $(this).data("id");
         });
 
-        $("#chat-form").submit(function(e){
+        // Chat form submission using Fetch
+        $("#chat-form").submit(async function(e){
             e.preventDefault();
-            let msg = $("#message").val();
-            if(msg.trim() !== ""){
-                socket.emit("send_message", { sender_id, msg });
-                $("#message").val("");
+            const message = $("#message").val().trim();
+            if(!message || !receiver_id) return;
+
+            try {
+                const response = await fetch('/saveChat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sender_id, receiver_id, message })
+                });
+                const data = await response.json();
+
+                if(data.success){
+                    $("#message").val('');
+                    $(".chat-container").append(`
+                        <div class="current-user-chat">
+                            <h4>${data.data.message}</h4>
+                        </div>
+                    `);
+                    $(".chat-container").scrollTop($(".chat-container")[0].scrollHeight);
+                } else {
+                    alert(data.msg);
+                }
+            } catch(err){
+                console.error("Fetch error:", err);
             }
         });
-    });
-    socket.on('getOnlineUser',(data)=>{
-        let userId = data.user_id;
-        $("#" + userId + "-status").removeClass("bg-secondary").addClass("bg-success").text("Online");
-    });
-    socket.on('getOfflineUser',(data)=>{
-        let userId = data.user_id;
-        $("#" + userId + "-status").removeClass("bg-success").addClass("bg-secondary").text("Offline");
+
+        // Update online/offline badges
+        socket.on('getOnlineUser', data => {
+            $("#" + data.user_id + "-status")
+                .removeClass("bg-secondary")
+                .addClass("bg-success")
+                .text("Online");
+        });
+
+        socket.on('getOfflineUser', data => {
+            $("#" + data.user_id + "-status")
+                .removeClass("bg-success")
+                .addClass("bg-secondary")
+                .text("Offline");
+        });
     });
 </script>
+
 <%- include('layout/footer') %>
