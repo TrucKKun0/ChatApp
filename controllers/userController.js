@@ -99,7 +99,25 @@ const login = async(req,res)=>{
         res.status(500).send("Internal Server Error");
     }
 };
+const deleteChat = async (req, res) => {
+    try {
+        const { id } = req.body;
+        if (!id) {
+            return res.status(400).send({ success: false, msg: "Chat ID is required" });
+        }
 
+        // Find and delete the chat
+        const deletedChat = await chatModel.findByIdAndDelete(id);
+        if (!deletedChat) {
+            return res.status(404).send({ success: false, msg: "Chat not found" });
+        }
+
+        res.status(200).send({ success: true, msg: "Chat deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting chat:", error);
+        res.status(500).send({ success: false, msg: error.message });
+    }
+}
 const saveChat = async (req, res) => {
 try{
     const {sender_id,receiver_id,message} = req.body;
@@ -125,5 +143,6 @@ module.exports = {
     loadDashboard,
     logout,
     login,
-    saveChat
+    saveChat,
+    deleteChat
 };

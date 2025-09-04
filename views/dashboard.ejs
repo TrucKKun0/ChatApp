@@ -39,7 +39,90 @@
     </div>
 </div>
 
+
+<!-- Modal -->
+<div class="modal fade" id="deleteChatModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLongTitle">Delete Chat</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form action="" id="deleteChatForm" method="post">
+      <div class="modal-body">
+        <input type="hidden" name="id" id="delete-chat-id" >
+        <p>Are you sure you want to delete this chat?</p>
+        <p><b id="delete-msg"></b></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.fa-trash {
+    cursor: pointer;
+    color: #ffffff;
+    margin-left: 8px;
+    padding: 2px;
+    opacity: 0.7;
+    font-size: 12px;
+}
+.fa-trash:hover {
+    opacity: 1;
+    color: #ffcccc;
+}
+.chat-container {
+    padding: 15px !important;
+}
+.text-end {
+    text-align: right !important;
+}
+.text-start {
+    text-align: left !important;
+}
+.current-user-chat {
+    margin-bottom: 10px;
+}
+.current-user-chat h4 {
+    background-color: #007bff;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 18px;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    max-width: 70%;
+    margin-left: auto;
+    word-wrap: break-word;
+}
+.other-user-chat {
+    margin-bottom: 10px;
+}
+.other-user-chat h4 {
+    background-color: #f1f1f1;
+    color: #333;
+    padding: 8px 12px;
+    border-radius: 18px;
+    margin: 0;
+    display: inline-block;
+    max-width: 70%;
+    word-wrap: break-word;
+}
+.message-content {
+    flex: 1;
+    margin-right: 8px;
+}
+</style>
+
 <script>
+
     const sender_id = '<%= user._id %>';
     let receiver_id;
 
@@ -75,8 +158,11 @@
                 if(data.success){
                     $("#message").val('');
                     $(".chat-container").append(`
-                        <div class="current-user-chat text-end">
-                            <h4>${data.data.message}</h4>
+                        <div class="current-user-chat text-end" id ="${data.data._id}">
+                            <h4>
+                                <span class="message-content">${data.data.message}</span>
+                                <i class="fa fa-trash" aria-hidden="true" data-id="${data.data._id}" data-toggle="modal" data-target="#deleteChatModal"></i>
+                            </h4>
                         </div>
                     `);
                     $(".chat-container").scrollTop($(".chat-container")[0].scrollHeight);
@@ -95,7 +181,7 @@
         socket.on("loadNewChat", (chat) => {
             if(chat.sender_id === receiver_id && chat.receiver_id === sender_id){
                 $(".chat-container").append(`
-                    <div class="other-user-chat text-start">
+                    <div class="other-user-chat text-start" id="${chat._id}">
                         <h4>${chat.message}</h4>
                     </div>
                 `);
@@ -129,11 +215,56 @@
             } else {
                 addClass = 'other-user-chat text-start';
             }
-            html += `<div class="${addClass}"><h4>${chats[i].message}</h4></div>`;
+            if(chats[i].sender_id === sender_id){
+                html += `<div class="${addClass}" id="${chats[i]._id}">
+                    <h4>
+                        <span class="message-content">${chats[i].message}</span>
+                        <i class="fa fa-trash" aria-hidden="true" data-id="${chats[i]._id}" data-toggle="modal" data-target="#deleteChatModal"></i>
+                    </h4>
+                </div>`;
+            } else {
+                html += `<div class="${addClass}" id="${chats[i]._id}">
+                    <h4>${chats[i].message}</h4>
+                </div>`;
+            }
         }
         console.log("Generated HTML:", html);
         $(".chat-container").append(html);
         $(".chat-container").scrollTop($(".chat-container")[0].scrollHeight);
+    });
+    //delete chat
+    $(document).on('click', '.fa-trash', function() {
+        console.log('Trash icon clicked!');
+        let msg = $(this).parent().text();
+        $('#delete-msg').text(msg);
+        $('#delete-chat-id').val($(this).attr('data-id'));
+
+        // Manually show the modal (Bootstrap 4)
+        $('#deleteChatModal').modal('show');
+    });
+    $('#deleteChatForm').submit(async function(e) {
+        e.preventDefault();
+        let chatId = $('#delete-chat-id').val();
+        try {
+            const response = await fetch('/deleteChat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: chatId })
+            });
+            const data = await response.json();
+            if(data.success){
+                $('#' + chatId).remove();
+                $('#deleteChatModal').modal('hide');
+                socket.emit("chatDeleted", { chatId });
+            } else {
+                alert(data.msg);
+            }
+        } catch(err) {
+            console.error("Fetch error:", err);
+        }
+        socket.on("chatDeleted", ({ chatId }) => {
+            $('#' + chatId).remove();
+        });
     });
 </script>
 

@@ -40,6 +40,7 @@ user_route.get('/',auth.isLogout,userController.loadLogin)
 user_route.post('/',userController.login)
 user_route.get('/logout',auth.isLogin,userController.logout)
 user_route.post('/saveChat',auth.isLogin,userController.saveChat)
+user_route.post('/deleteChat',auth.isLogin,userController.deleteChat)
 
 user_route.get('/dashboard',auth.isLogin,userController.loadDashboard)
 user_route.use((req, res) => {
