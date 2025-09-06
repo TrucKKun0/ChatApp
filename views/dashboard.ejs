@@ -64,9 +64,33 @@
     </div>
   </div>
 </div>
+<!-- Modal -->
+<div class="modal fade" id="updateChatModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLongTitle">Edit Chat</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form action="" id="updateChatForm" method="post">
+      <div class="modal-body">
+        <input type="hidden" name="id" id="edit-chat-id" >
+        <input type="text" name="message" id="edit-message" class="form-control" required>
+        
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary">Update</button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <style>
-.fa-trash {
+.fa-trash, .fa-edit {
     cursor: pointer;
     color: #ffffff;
     margin-left: 8px;
@@ -77,6 +101,10 @@
 .fa-trash:hover {
     opacity: 1;
     color: #ffcccc;
+}
+.fa-edit:hover {
+    opacity: 1;
+    color: #ccffcc;
 }
 .chat-container {
     padding: 15px !important;
@@ -162,7 +190,8 @@
                             <h4>
                                 <span class="message-content">${data.data.message}</span>
                                 <i class="fa fa-trash" aria-hidden="true" data-id="${data.data._id}" data-toggle="modal" data-target="#deleteChatModal"></i>
-                            </h4>
+                                <i class="fa fa-edit" aria-hidden="true" data-id="${data.data._id}" data-toggle="modal" data-message="${data.data.message}" data-target="#updateChatModal"></i>
+                                </h4>
                         </div>
                     `);
                     $(".chat-container").scrollTop($(".chat-container")[0].scrollHeight);
@@ -220,6 +249,7 @@
                     <h4>
                         <span class="message-content">${chats[i].message}</span>
                         <i class="fa fa-trash" aria-hidden="true" data-id="${chats[i]._id}" data-toggle="modal" data-target="#deleteChatModal"></i>
+                        <i class="fa fa-edit" aria-hidden="true" data-id="${chats[i]._id}" data-toggle="modal" data-message="${chats[i].message}" data-target="#updateChatModal"></i>
                     </h4>
                 </div>`;
             } else {
@@ -265,6 +295,52 @@
         socket.on("chatDeleted", ({ chatId }) => {
             $('#' + chatId).remove();
         });
+    });
+
+    //update chat
+    $(document).on('click', '.fa-edit', function() {
+        console.log('Edit icon clicked!');
+        const chatId = $(this).attr('data-id');
+        const message = $(this).attr('data-message');
+        console.log('Chat ID:', chatId, 'Message:', message);
+
+        $('#edit-chat-id').val(chatId);
+        $('#edit-message').val(message);
+
+        // Manually show the modal
+        $('#updateChatModal').modal('show');
+    });
+    $('#updateChatForm').submit(async function(e) {
+        e.preventDefault();
+        let chatId = $('#edit-chat-id').val();
+        let message = $('#edit-message').val().trim();
+        console.log('Updating chat:', chatId, 'with message:', message);
+        if(!message) {
+            alert('Message cannot be empty');
+            return;
+        }
+        try {
+            const response = await fetch('/updateChat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: chatId, message })
+            });
+            const data = await response.json();
+            if(data.success){
+                $('#' + chatId).find('.message-content').text(message);
+                $('#updateChatModal').modal('hide');
+                socket.emit("chatUpdated", { chatId, message });
+            } else {
+                alert(data.msg);
+            }
+        } catch(err) {
+            console.error("Fetch error:", err);
+        }
+    });
+
+    // Socket listener for chat updates (should be outside the submit function)
+    socket.on("chatUpdated", ({ chatId, message }) => {
+        $('#' + chatId).find('.message-content').text(message);
     });
 </script>
 

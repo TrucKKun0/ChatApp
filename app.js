@@ -46,6 +46,11 @@ usp.on("connection",async (socket) => {
         
         socket.broadcast.emit("chatDeleted", { chatId });
     })
+    socket.on("chatUpdated", async (data) => {
+        const { chatId, message } = data;
+        await chatModel.findByIdAndUpdate(chatId, { message });
+        socket.broadcast.emit("chatUpdated", { chatId, message });
+    })
 });
 http.listen(3000, () => {
     console.log("Server is running on port 3000");

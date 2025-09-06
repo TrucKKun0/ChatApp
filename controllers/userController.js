@@ -118,6 +118,29 @@ const deleteChat = async (req, res) => {
         res.status(500).send({ success: false, msg: error.message });
     }
 }
+const updateChat = async (req, res) => {
+    try {
+        const { id, message } = req.body;
+        if (!id || !message) {
+            return res.status(400).send({ success: false, msg: "Chat ID and message are required" });
+        }
+
+        // Find and update the chat
+        const updatedChat = await chatModel.findByIdAndUpdate(
+            id,
+            { message: message },
+            { new: true }
+        );
+        if (!updatedChat) {
+            return res.status(404).send({ success: false, msg: "Chat not found" });
+        }
+
+        res.status(200).send({ success: true, msg: "Chat updated successfully", data: updatedChat });
+    } catch (error) {
+        console.error("Error updating chat:", error);
+        res.status(500).send({ success: false, msg: error.message });
+    }
+}
 const saveChat = async (req, res) => {
 try{
     const {sender_id,receiver_id,message} = req.body;
@@ -144,5 +167,6 @@ module.exports = {
     logout,
     login,
     saveChat,
-    deleteChat
+    deleteChat,
+    updateChat
 };
