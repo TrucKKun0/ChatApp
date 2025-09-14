@@ -10,9 +10,9 @@ const path = require('path');
 const multer = require('multer');
 const auth = require('../middlewares/auth'); 
 const session = require('express-session');
-const {SESSION_SECRET} = process.env;
+
 user_route.use(session({
-    secret: SESSION_SECRET || "defaultSecret",
+    secret: "defaultSecret",
     resave: false,
     saveUninitialized: true,
     cookie: { secure: false }
